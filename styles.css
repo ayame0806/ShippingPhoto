@@ -132,8 +132,11 @@ svg {
 
 .camera-stage {
   position: relative;
-  flex: 1;
-  min-height: 260px;
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 210px;
+  max-height: clamp(240px, 42dvh, 360px);
+  aspect-ratio: var(--camera-aspect, 4 / 3);
   background: #101010;
   overflow: hidden;
 }
@@ -146,7 +149,8 @@ svg {
 }
 
 .camera-stage video {
-  object-fit: cover;
+  object-fit: contain;
+  background: #101010;
 }
 
 .camera-overlay {
@@ -166,8 +170,8 @@ svg {
 
 .control-panel {
   display: grid;
-  gap: 12px;
-  padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+  gap: 10px;
+  padding: 10px 14px calc(14px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
   background: var(--surface);
   box-shadow: 0 -12px 28px rgba(23, 23, 23, 0.08);
@@ -241,6 +245,7 @@ select {
 
 .capture-button,
 .fallback-button {
+  order: -1;
   min-height: 56px;
   width: 100%;
   border: 0;
@@ -360,7 +365,7 @@ select {
   }
 
   .camera-stage {
-    min-height: 520px;
+    max-height: min(58dvh, 520px);
   }
 }
 

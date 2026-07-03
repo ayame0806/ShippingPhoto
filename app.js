@@ -173,6 +173,14 @@ function stopCamera() {
   state.cameraReady = false;
 }
 
+function updateCameraFrameRatio() {
+  const { videoWidth, videoHeight } = els.video;
+  if (!videoWidth || !videoHeight) {
+    return;
+  }
+  els.video.closest(".camera-stage")?.style.setProperty("--camera-aspect", `${videoWidth} / ${videoHeight}`);
+}
+
 async function startCamera() {
   stopCamera();
   state.cameraReady = false;
@@ -198,6 +206,7 @@ async function startCamera() {
     });
     els.video.srcObject = state.stream;
     await els.video.play();
+    updateCameraFrameRatio();
     state.cameraReady = true;
     els.capture.hidden = false;
     els.capture.disabled = !state.selectedVendor;
@@ -393,6 +402,7 @@ function bindEvents() {
   els.restart.addEventListener("click", startCamera);
   els.fallback.addEventListener("click", () => els.fallbackInput.click());
   els.fallbackInput.addEventListener("change", () => captureFallbackFile(els.fallbackInput.files?.[0]));
+  els.video.addEventListener("loadedmetadata", updateCameraFrameRatio);
 
   window.addEventListener("pagehide", stopCamera);
   window.setInterval(updateFilenamePreview, 1000);

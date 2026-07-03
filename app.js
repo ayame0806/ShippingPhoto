@@ -11,7 +11,6 @@ const els = {
   captureText: document.querySelector("#captureButtonText"),
   fallback: document.querySelector("#fallbackButton"),
   fallbackInput: document.querySelector("#fallbackInput"),
-  filenamePreview: document.querySelector("#filenamePreview"),
   zipInput: document.querySelector("#zipInput"),
   zipPick: document.querySelector("#zipPickButton"),
   zipCreate: document.querySelector("#zipCreateButton"),
@@ -27,6 +26,7 @@ const state = {
   selectedKind: "",
   stream: null,
   cameraReady: false,
+  resumeCameraOnVisible: false,
   zipFiles: [],
 };
 
@@ -100,21 +100,8 @@ function setSelectedKind(kind) {
   for (const button of els.kindButtons) {
     button.setAttribute("aria-checked", String(button.dataset.kind === state.selectedKind));
   }
-  updateFilenamePreview();
   updatePhotoActions();
   updateCameraLayoutBudget();
-}
-
-function updateFilenamePreview() {
-  if (!state.selectedVendor) {
-    els.filenamePreview.textContent = "請先選擇廠商";
-    return;
-  }
-  if (!state.selectedKind) {
-    els.filenamePreview.textContent = "請選擇種類";
-    return;
-  }
-  els.filenamePreview.textContent = currentFilename();
 }
 
 function canSavePhoto() {
@@ -156,7 +143,6 @@ function populateVendors(typeName, preferredVendor = "") {
   els.typeSelect.value = state.selectedType;
   els.vendorSelect.value = state.selectedVendor;
   saveSelection();
-  updateFilenamePreview();
 }
 
 async function loadVendors() {
@@ -187,6 +173,9 @@ function stopCamera() {
   }
   state.stream = null;
   state.cameraReady = false;
+  els.video.pause();
+  els.video.srcObject = null;
+  updatePhotoActions();
 }
 
 function updateCameraFrameRatio() {
@@ -215,6 +204,7 @@ function updateCameraLayoutBudget() {
 async function startCamera() {
   stopCamera();
   state.cameraReady = false;
+  state.resumeCameraOnVisible = false;
   els.capture.hidden = false;
   els.capture.disabled = true;
   els.fallback.hidden = true;
@@ -340,7 +330,6 @@ async function saveCanvas(canvas) {
   const blob = await canvasToBlob(canvas);
   downloadBlob(blob, filename);
   setStatus(`已儲存 ${filename}`, "ready");
-  updateFilenamePreview();
 }
 
 async function captureCurrentFrame() {
@@ -550,7 +539,6 @@ function bindEvents() {
   els.vendorSelect.addEventListener("change", () => {
     state.selectedVendor = els.vendorSelect.value;
     saveSelection();
-    updateFilenamePreview();
     updatePhotoActions();
   });
 
@@ -568,8 +556,17 @@ function bindEvents() {
   els.zipCreate.addEventListener("click", createZipFromSelectedFiles);
 
   window.addEventListener("pagehide", stopCamera);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      state.resumeCameraOnVisible = state.cameraReady;
+      stopCamera();
+      return;
+    }
+    if (state.resumeCameraOnVisible) {
+      startCamera();
+    }
+  });
   window.addEventListener("resize", updateCameraLayoutBudget);
-  window.setInterval(updateFilenamePreview, 1000);
 }
 
 async function init() {

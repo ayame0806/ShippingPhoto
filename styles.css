@@ -280,25 +280,6 @@ select {
   background: var(--ink);
 }
 
-.filename-preview {
-  min-height: 36px;
-  display: flex;
-  align-items: center;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fafbf8;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.filename-preview span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .zip-tool {
   display: grid;
   gap: 10px;

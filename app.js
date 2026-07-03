@@ -8,6 +8,7 @@ const els = {
   vendorSelect: document.querySelector("#vendorSelect"),
   kindButtons: Array.from(document.querySelectorAll(".kind-button")),
   capture: document.querySelector("#captureButton"),
+  captureText: document.querySelector("#captureButtonText"),
   fallback: document.querySelector("#fallbackButton"),
   fallbackInput: document.querySelector("#fallbackInput"),
   filenamePreview: document.querySelector("#filenamePreview"),
@@ -121,8 +122,11 @@ function canSavePhoto() {
 }
 
 function updatePhotoActions() {
+  const needsKind = !state.selectedKind;
   els.capture.disabled = !state.cameraReady || !canSavePhoto();
   els.fallback.disabled = !canSavePhoto();
+  els.captureText.textContent = needsKind ? "請選種類" : "拍照儲存";
+  els.fallback.textContent = needsKind ? "請選種類" : "拍照儲存";
 }
 
 function populateTypes() {

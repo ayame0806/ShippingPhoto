@@ -380,10 +380,6 @@ select {
 }
 
 @media (max-width: 374px) {
-  .select-grid {
-    grid-template-columns: 1fr;
-  }
-
   .topbar h1 {
     font-size: 20px;
   }

@@ -6,6 +6,7 @@ const els = {
   overlay: document.querySelector("#cameraOverlay"),
   typeSelect: document.querySelector("#typeSelect"),
   vendorSelect: document.querySelector("#vendorSelect"),
+  photoDate: document.querySelector("#photoDate"),
   kindButtons: Array.from(document.querySelectorAll(".kind-button")),
   capture: document.querySelector("#captureButton"),
   captureText: document.querySelector("#captureButtonText"),
@@ -24,6 +25,7 @@ const state = {
   selectedType: "",
   selectedVendor: "",
   selectedKind: "",
+  selectedDate: "",
   stream: null,
   cameraReady: false,
   resumeCameraOnVisible: false,
@@ -45,6 +47,19 @@ function timestamp(date = new Date()) {
   ].join("");
 }
 
+function dateValue(date = new Date()) {
+  return [date.getFullYear(), pad(date.getMonth() + 1), pad(date.getDate())].join("-");
+}
+
+function compactDate(value) {
+  return String(value || "").replaceAll("-", "");
+}
+
+function selectedTimestamp(date = new Date()) {
+  const selectedDate = /^\d{4}-\d{2}-\d{2}$/.test(state.selectedDate) ? state.selectedDate : dateValue(date);
+  return `${compactDate(selectedDate)}${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+}
+
 function cleanPart(value) {
   return String(value || "")
     .trim()
@@ -55,7 +70,7 @@ function cleanPart(value) {
 function currentFilename(date = new Date()) {
   const vendor = cleanPart(state.selectedVendor);
   const kind = cleanPart(state.selectedKind);
-  return `${vendor}_${kind}_${timestamp(date)}.jpg`;
+  return `${vendor}_${kind}_${selectedTimestamp(date)}.jpg`;
 }
 
 function setStatus(message, tone = "normal") {
@@ -105,7 +120,7 @@ function setSelectedKind(kind) {
 }
 
 function canSavePhoto() {
-  return Boolean(state.selectedVendor && state.selectedKind);
+  return Boolean(state.selectedVendor && state.selectedKind && state.selectedDate);
 }
 
 function updatePhotoActions() {
@@ -161,6 +176,8 @@ async function loadVendors() {
 
   populateTypes();
   populateVendors(defaultType, saved.selectedVendor || data.defaultVendor || "");
+  state.selectedDate = dateValue();
+  els.photoDate.value = state.selectedDate;
   setSelectedKind("");
 }
 
@@ -539,6 +556,12 @@ function bindEvents() {
   els.vendorSelect.addEventListener("change", () => {
     state.selectedVendor = els.vendorSelect.value;
     saveSelection();
+    updatePhotoActions();
+  });
+
+  els.photoDate.addEventListener("change", () => {
+    state.selectedDate = els.photoDate.value || dateValue();
+    els.photoDate.value = state.selectedDate;
     updatePhotoActions();
   });
 

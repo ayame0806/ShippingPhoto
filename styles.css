@@ -107,6 +107,7 @@ button {
 .icon-button:focus-visible,
 .capture-button:focus-visible,
 .fallback-button:focus-visible,
+.secondary-button:focus-visible,
 .kind-button:focus-visible,
 select:focus-visible {
   outline: 3px solid rgba(212, 175, 55, 0.45);
@@ -135,7 +136,7 @@ svg {
   flex: 0 0 auto;
   width: 100%;
   min-height: 210px;
-  max-height: clamp(240px, 42dvh, 360px);
+  max-height: min(var(--camera-max-height, 42dvh), 360px);
   aspect-ratio: var(--camera-aspect, 4 / 3);
   background: #101010;
   overflow: hidden;
@@ -190,8 +191,7 @@ svg {
 }
 
 .field span,
-.kind-group legend,
-.recent-title {
+.kind-group legend {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.2;
@@ -245,7 +245,6 @@ select {
 
 .capture-button,
 .fallback-button {
-  order: -1;
   min-height: 56px;
   width: 100%;
   border: 0;
@@ -264,7 +263,9 @@ select {
   background: var(--accent);
 }
 
-.capture-button:disabled {
+.capture-button:disabled,
+.fallback-button:disabled,
+.secondary-button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -298,57 +299,66 @@ select {
   white-space: nowrap;
 }
 
-.recent-panel {
+.zip-tool {
   display: grid;
-  gap: 8px;
-}
-
-.recent-list {
-  display: grid;
-  gap: 8px;
-  max-height: 128px;
-  overflow: auto;
-}
-
-.recent-item {
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) 44px;
-  align-items: center;
   gap: 10px;
-  min-height: 60px;
-  padding: 6px;
+  margin-top: 2px;
+  padding-top: 12px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fafbf8;
+  border-width: 1px 0 0;
 }
 
-.recent-item img {
-  width: 52px;
-  height: 46px;
-  display: block;
-  object-fit: cover;
-  border-radius: 6px;
-  background: #dedede;
+.zip-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.recent-item span {
+.zip-header h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.zip-header span {
   min-width: 0;
   overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
-  color: var(--ink);
 }
 
-.recent-download {
-  width: 44px;
-  height: 44px;
+.zip-actions {
   display: grid;
-  place-items: center;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.secondary-button {
+  min-height: 48px;
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
-  background: var(--surface);
+  background: #fafbf8;
+  font-size: 15px;
+  font-weight: 800;
+  transition: background-color 180ms ease, border-color 180ms ease, opacity 180ms ease;
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: #f0f2ec;
+  border-color: #c6cbbf;
+}
+
+.secondary-button.strong {
+  border-color: var(--ink);
+  color: #ffffff;
+  background: var(--ink);
 }
 
 @media (min-width: 720px) {
@@ -365,7 +375,7 @@ select {
   }
 
   .camera-stage {
-    max-height: min(58dvh, 520px);
+    max-height: min(var(--camera-max-height, 58dvh), 520px);
   }
 }
 

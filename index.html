@@ -32,27 +32,6 @@
         </section>
 
         <section class="control-panel" aria-label="拍照設定">
-          <div class="select-grid">
-            <label class="field">
-              <span>類型</span>
-              <select id="typeSelect"></select>
-            </label>
-            <label class="field">
-              <span>廠商</span>
-              <select id="vendorSelect"></select>
-            </label>
-          </div>
-
-          <fieldset class="kind-group">
-            <legend>種類</legend>
-            <div class="kind-options" role="radiogroup" aria-label="種類">
-              <button class="kind-button" type="button" role="radio" aria-checked="true" data-kind="1">1</button>
-              <button class="kind-button" type="button" role="radio" aria-checked="false" data-kind="2">2</button>
-              <button class="kind-button" type="button" role="radio" aria-checked="false" data-kind="3">3</button>
-              <button class="kind-button" type="button" role="radio" aria-checked="false" data-kind="4">4</button>
-            </div>
-          </fieldset>
-
           <button id="captureButton" class="capture-button" type="button" disabled>
             <svg aria-hidden="true" viewBox="0 0 24 24">
               <path d="M14.5 4h-5L8 6H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3l-1.5-2Z" />
@@ -66,14 +45,42 @@
           </button>
           <input id="fallbackInput" type="file" accept="image/*" capture="environment" hidden />
 
+          <fieldset class="kind-group">
+            <legend>種類</legend>
+            <div class="kind-options" role="radiogroup" aria-label="種類">
+              <button class="kind-button" type="button" role="radio" aria-checked="false" data-kind="1">1</button>
+              <button class="kind-button" type="button" role="radio" aria-checked="false" data-kind="2">2</button>
+              <button class="kind-button" type="button" role="radio" aria-checked="false" data-kind="3">3</button>
+              <button class="kind-button" type="button" role="radio" aria-checked="false" data-kind="4">4</button>
+            </div>
+          </fieldset>
+
+          <div class="select-grid">
+            <label class="field">
+              <span>類型</span>
+              <select id="typeSelect"></select>
+            </label>
+            <label class="field">
+              <span>廠商</span>
+              <select id="vendorSelect"></select>
+            </label>
+          </div>
+
           <div class="filename-preview" aria-live="polite">
             <span id="filenamePreview">載入清單中</span>
           </div>
 
-          <div id="recentPanel" class="recent-panel" hidden>
-            <div class="recent-title">最近照片</div>
-            <div id="recentList" class="recent-list"></div>
-          </div>
+          <section class="zip-tool" aria-label="壓縮工具">
+            <div class="zip-header">
+              <h2>壓縮工具</h2>
+              <span id="zipStatus">尚未選取 JPG</span>
+            </div>
+            <input id="zipInput" type="file" accept="image/jpeg,.jpg,.jpeg" multiple hidden />
+            <div class="zip-actions">
+              <button id="zipPickButton" class="secondary-button" type="button">選取 JPG</button>
+              <button id="zipCreateButton" class="secondary-button strong" type="button" disabled>產生 ZIP</button>
+            </div>
+          </section>
         </section>
       </main>
     </div>

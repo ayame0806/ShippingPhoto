@@ -11,21 +11,22 @@ const els = {
   fallback: document.querySelector("#fallbackButton"),
   fallbackInput: document.querySelector("#fallbackInput"),
   filenamePreview: document.querySelector("#filenamePreview"),
-  recentPanel: document.querySelector("#recentPanel"),
-  recentList: document.querySelector("#recentList"),
+  zipInput: document.querySelector("#zipInput"),
+  zipPick: document.querySelector("#zipPickButton"),
+  zipCreate: document.querySelector("#zipCreateButton"),
+  zipStatus: document.querySelector("#zipStatus"),
 };
 
 const storageKey = "shipping-photo-selection";
-const recentLimit = 3;
 
 const state = {
   groups: [],
   selectedType: "",
   selectedVendor: "",
-  selectedKind: "1",
+  selectedKind: "",
   stream: null,
   cameraReady: false,
-  recent: [],
+  zipFiles: [],
 };
 
 function pad(value) {
@@ -77,7 +78,6 @@ function saveSelection() {
     JSON.stringify({
       selectedType: state.selectedType,
       selectedVendor: state.selectedVendor,
-      selectedKind: state.selectedKind,
     }),
   );
 }
@@ -99,8 +99,9 @@ function setSelectedKind(kind) {
   for (const button of els.kindButtons) {
     button.setAttribute("aria-checked", String(button.dataset.kind === state.selectedKind));
   }
-  saveSelection();
   updateFilenamePreview();
+  updatePhotoActions();
+  updateCameraLayoutBudget();
 }
 
 function updateFilenamePreview() {
@@ -108,7 +109,20 @@ function updateFilenamePreview() {
     els.filenamePreview.textContent = "請先選擇廠商";
     return;
   }
+  if (!state.selectedKind) {
+    els.filenamePreview.textContent = "請選擇種類";
+    return;
+  }
   els.filenamePreview.textContent = currentFilename();
+}
+
+function canSavePhoto() {
+  return Boolean(state.selectedVendor && state.selectedKind);
+}
+
+function updatePhotoActions() {
+  els.capture.disabled = !state.cameraReady || !canSavePhoto();
+  els.fallback.disabled = !canSavePhoto();
 }
 
 function populateTypes() {
@@ -154,12 +168,10 @@ async function loadVendors() {
 
   const saved = readSelection();
   const defaultType = groupByName(saved.selectedType) ? saved.selectedType : data.defaultType || state.groups[0].name;
-  const configuredKind = ["1", "2", "3", "4"].includes(data.defaultKind) ? data.defaultKind : "1";
-  const defaultKind = ["1", "2", "3", "4"].includes(saved.selectedKind) ? saved.selectedKind : configuredKind;
 
   populateTypes();
   populateVendors(defaultType, saved.selectedVendor || data.defaultVendor || "");
-  setSelectedKind(defaultKind);
+  setSelectedKind("");
 }
 
 function stopCamera() {
@@ -179,6 +191,21 @@ function updateCameraFrameRatio() {
     return;
   }
   els.video.closest(".camera-stage")?.style.setProperty("--camera-aspect", `${videoWidth} / ${videoHeight}`);
+  updateCameraLayoutBudget();
+}
+
+function updateCameraLayoutBudget() {
+  const stage = els.video.closest(".camera-stage");
+  const topbar = document.querySelector(".topbar");
+  const panel = document.querySelector(".control-panel");
+  const activeCameraButton = els.capture.hidden ? els.fallback : els.capture;
+  const reserved =
+    (topbar?.offsetHeight || 0) +
+    (activeCameraButton?.offsetHeight || 0) +
+    (document.querySelector(".kind-group")?.offsetHeight || 0) +
+    (panel ? parseFloat(getComputedStyle(panel).paddingTop) + 24 : 36);
+  const maxHeight = Math.max(180, Math.floor(window.innerHeight - reserved));
+  stage?.style.setProperty("--camera-max-height", `${maxHeight}px`);
 }
 
 async function startCamera() {
@@ -209,7 +236,7 @@ async function startCamera() {
     updateCameraFrameRatio();
     state.cameraReady = true;
     els.capture.hidden = false;
-    els.capture.disabled = !state.selectedVendor;
+    updatePhotoActions();
     hideOverlay();
     setStatus("相機已就緒", "ready");
   } catch (error) {
@@ -223,6 +250,8 @@ function showFallback(message) {
   els.capture.hidden = true;
   els.capture.disabled = true;
   els.fallback.hidden = false;
+  updatePhotoActions();
+  updateCameraLayoutBudget();
   showOverlay(message);
   setStatus(`${message}，可改用拍照選取`, "error");
 }
@@ -302,60 +331,16 @@ function downloadBlob(blob, filename) {
   window.setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
-function addRecent(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  state.recent.unshift({ url, filename, blob });
-  while (state.recent.length > recentLimit) {
-    const item = state.recent.pop();
-    URL.revokeObjectURL(item.url);
-  }
-  renderRecent();
-}
-
-function renderRecent() {
-  els.recentPanel.hidden = state.recent.length === 0;
-  els.recentList.replaceChildren(
-    ...state.recent.map((item) => {
-      const row = document.createElement("div");
-      row.className = "recent-item";
-
-      const image = document.createElement("img");
-      image.src = item.url;
-      image.alt = item.filename;
-
-      const name = document.createElement("span");
-      name.textContent = item.filename;
-
-      const download = document.createElement("button");
-      download.type = "button";
-      download.className = "recent-download";
-      download.setAttribute("aria-label", `重新下載 ${item.filename}`);
-      download.innerHTML = `
-        <svg aria-hidden="true" viewBox="0 0 24 24">
-          <path d="M12 3v12" />
-          <path d="m7 10 5 5 5-5" />
-          <path d="M5 21h14" />
-        </svg>
-      `;
-      download.addEventListener("click", () => downloadBlob(item.blob, item.filename));
-
-      row.append(image, name, download);
-      return row;
-    }),
-  );
-}
-
 async function saveCanvas(canvas) {
   const filename = currentFilename();
   const blob = await canvasToBlob(canvas);
   downloadBlob(blob, filename);
-  addRecent(blob, filename);
   setStatus(`已儲存 ${filename}`, "ready");
   updateFilenamePreview();
 }
 
 async function captureCurrentFrame() {
-  if (!state.selectedVendor || !state.cameraReady) {
+  if (!canSavePhoto() || !state.cameraReady) {
     return;
   }
   els.capture.disabled = true;
@@ -364,12 +349,12 @@ async function captureCurrentFrame() {
   } catch {
     setStatus("拍照失敗，請重試", "error");
   } finally {
-    els.capture.disabled = !state.cameraReady || !state.selectedVendor;
+    updatePhotoActions();
   }
 }
 
 async function captureFallbackFile(file) {
-  if (!file) {
+  if (!file || !canSavePhoto()) {
     return;
   }
   try {
@@ -381,17 +366,188 @@ async function captureFallbackFile(file) {
   }
 }
 
+function updateZipStatus() {
+  if (!state.zipFiles.length) {
+    els.zipStatus.textContent = "尚未選取 JPG";
+    els.zipCreate.disabled = true;
+    return;
+  }
+  const totalMb = state.zipFiles.reduce((sum, file) => sum + file.size, 0) / 1024 / 1024;
+  els.zipStatus.textContent = `${state.zipFiles.length} 張，${totalMb.toFixed(1)} MB`;
+  els.zipCreate.disabled = false;
+}
+
+function handleZipFiles(files) {
+  state.zipFiles = Array.from(files || []).filter((file) => /\.(jpe?g)$/i.test(file.name) || file.type === "image/jpeg");
+  updateZipStatus();
+}
+
+function uniqueZipName(file, usedNames) {
+  const safeName = cleanPart(file.name) || `photo_${usedNames.size + 1}.jpg`;
+  const dotIndex = safeName.lastIndexOf(".");
+  const base = dotIndex > 0 ? safeName.slice(0, dotIndex) : safeName;
+  const ext = dotIndex > 0 ? safeName.slice(dotIndex) : ".jpg";
+  let candidate = safeName;
+  let counter = 2;
+  while (usedNames.has(candidate.toLowerCase())) {
+    candidate = `${base} (${counter})${ext}`;
+    counter += 1;
+  }
+  usedNames.add(candidate.toLowerCase());
+  return candidate;
+}
+
+let crcTable;
+
+function getCrcTable() {
+  if (crcTable) {
+    return crcTable;
+  }
+  crcTable = new Uint32Array(256);
+  for (let i = 0; i < 256; i += 1) {
+    let c = i;
+    for (let k = 0; k < 8; k += 1) {
+      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    }
+    crcTable[i] = c >>> 0;
+  }
+  return crcTable;
+}
+
+function crc32(bytes) {
+  const table = getCrcTable();
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc = table[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function zipDateTime(date) {
+  const dosTime = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+  const dosDate = ((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+  return { dosDate, dosTime };
+}
+
+function zipHeader(values) {
+  const buffer = new ArrayBuffer(values.reduce((sum, value) => sum + value.size, 0));
+  const view = new DataView(buffer);
+  let offset = 0;
+  for (const value of values) {
+    if (value.size === 4) {
+      view.setUint32(offset, value.value >>> 0, true);
+      offset += 4;
+    } else {
+      view.setUint16(offset, value.value & 0xffff, true);
+      offset += 2;
+    }
+  }
+  return new Uint8Array(buffer, 0, offset);
+}
+
+async function createStoreZip(files) {
+  const encoder = new TextEncoder();
+  const chunks = [];
+  const central = [];
+  const usedNames = new Set();
+  let offset = 0;
+
+  for (const file of files) {
+    const nameBytes = encoder.encode(uniqueZipName(file, usedNames));
+    const data = new Uint8Array(await file.arrayBuffer());
+    const crc = crc32(data);
+    const { dosDate, dosTime } = zipDateTime(file.lastModified ? new Date(file.lastModified) : new Date());
+    const localOffset = offset;
+    const flags = 0x0800;
+
+    const localHeader = zipHeader([
+      { size: 4, value: 0x04034b50 },
+      { size: 2, value: 20 },
+      { size: 2, value: flags },
+      { size: 2, value: 0 },
+      { size: 2, value: dosTime },
+      { size: 2, value: dosDate },
+      { size: 4, value: crc },
+      { size: 4, value: data.byteLength },
+      { size: 4, value: data.byteLength },
+      { size: 2, value: nameBytes.byteLength },
+      { size: 2, value: 0 },
+    ]);
+    chunks.push(localHeader, nameBytes, data);
+    offset += localHeader.byteLength + nameBytes.byteLength + data.byteLength;
+
+    const centralHeader = zipHeader([
+      { size: 4, value: 0x02014b50 },
+      { size: 2, value: 20 },
+      { size: 2, value: 20 },
+      { size: 2, value: flags },
+      { size: 2, value: 0 },
+      { size: 2, value: dosTime },
+      { size: 2, value: dosDate },
+      { size: 4, value: crc },
+      { size: 4, value: data.byteLength },
+      { size: 4, value: data.byteLength },
+      { size: 2, value: nameBytes.byteLength },
+      { size: 2, value: 0 },
+      { size: 2, value: 0 },
+      { size: 2, value: 0 },
+      { size: 2, value: 0 },
+      { size: 4, value: 0 },
+      { size: 4, value: localOffset },
+    ]);
+    central.push(centralHeader, nameBytes);
+  }
+
+  const centralOffset = offset;
+  const centralSize = central.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+  const endHeader = zipHeader([
+    { size: 4, value: 0x06054b50 },
+    { size: 2, value: 0 },
+    { size: 2, value: 0 },
+    { size: 2, value: files.length },
+    { size: 2, value: files.length },
+    { size: 4, value: centralSize },
+    { size: 4, value: centralOffset },
+    { size: 2, value: 0 },
+  ]);
+
+  return new Blob([...chunks, ...central, endHeader], { type: "application/zip" });
+}
+
+async function createZipFromSelectedFiles() {
+  if (!state.zipFiles.length) {
+    els.zipStatus.textContent = "尚未選取 JPG";
+    return;
+  }
+
+  els.zipCreate.disabled = true;
+  els.zipPick.disabled = true;
+  els.zipStatus.textContent = "壓縮中";
+
+  try {
+    const blob = await createStoreZip(state.zipFiles);
+    const filename = `出貨照片_${timestamp()}.zip`;
+    downloadBlob(blob, filename);
+    els.zipStatus.textContent = `已產生 ${filename}`;
+  } catch {
+    els.zipStatus.textContent = "壓縮失敗，請少量分批";
+  } finally {
+    els.zipPick.disabled = false;
+    els.zipCreate.disabled = state.zipFiles.length === 0;
+  }
+}
+
 function bindEvents() {
   els.typeSelect.addEventListener("change", () => {
     populateVendors(els.typeSelect.value);
-    els.capture.disabled = !state.cameraReady || !state.selectedVendor;
+    updatePhotoActions();
   });
 
   els.vendorSelect.addEventListener("change", () => {
     state.selectedVendor = els.vendorSelect.value;
     saveSelection();
     updateFilenamePreview();
-    els.capture.disabled = !state.cameraReady || !state.selectedVendor;
+    updatePhotoActions();
   });
 
   for (const button of els.kindButtons) {
@@ -403,8 +559,12 @@ function bindEvents() {
   els.fallback.addEventListener("click", () => els.fallbackInput.click());
   els.fallbackInput.addEventListener("change", () => captureFallbackFile(els.fallbackInput.files?.[0]));
   els.video.addEventListener("loadedmetadata", updateCameraFrameRatio);
+  els.zipPick.addEventListener("click", () => els.zipInput.click());
+  els.zipInput.addEventListener("change", () => handleZipFiles(els.zipInput.files));
+  els.zipCreate.addEventListener("click", createZipFromSelectedFiles);
 
   window.addEventListener("pagehide", stopCamera);
+  window.addEventListener("resize", updateCameraLayoutBudget);
   window.setInterval(updateFilenamePreview, 1000);
 }
 

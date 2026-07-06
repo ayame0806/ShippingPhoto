@@ -26,6 +26,7 @@ const state = {
   selectedVendor: "",
   selectedKind: "",
   selectedDate: "",
+  selectedMaxKind: 3,
   stream: null,
   cameraReady: false,
   resumeCameraOnVisible: false,
@@ -110,13 +111,36 @@ function groupByName(name) {
   return state.groups.find((group) => group.name === name);
 }
 
-function setSelectedKind(kind) {
-  state.selectedKind = String(kind);
+function selectedVendorEntry() {
+  const group = groupByName(state.selectedType);
+  return group?.vendors.find((vendor) => vendor.name === state.selectedVendor);
+}
+
+function maxKindForVendor() {
+  return selectedVendorEntry()?.max || 3;
+}
+
+function updateKindButtons() {
+  state.selectedMaxKind = maxKindForVendor();
+  if (Number(state.selectedKind) > state.selectedMaxKind) {
+    state.selectedKind = "";
+  }
+  document.querySelector(".kind-options")?.style.setProperty("--kind-columns", state.selectedMaxKind);
   for (const button of els.kindButtons) {
-    button.setAttribute("aria-checked", String(button.dataset.kind === state.selectedKind));
+    const kind = Number(button.dataset.kind);
+    button.hidden = kind > state.selectedMaxKind;
+    button.setAttribute("aria-checked", String(!button.hidden && button.dataset.kind === state.selectedKind));
   }
   updatePhotoActions();
   updateCameraLayoutBudget();
+}
+
+function setSelectedKind(kind) {
+  state.selectedKind = String(kind);
+  if (Number(state.selectedKind) > state.selectedMaxKind) {
+    state.selectedKind = "";
+  }
+  updateKindButtons();
 }
 
 function canSavePhoto() {
@@ -148,34 +172,110 @@ function populateVendors(typeName, preferredVendor = "") {
   els.vendorSelect.replaceChildren(
     ...vendors.map((vendor) => {
       const option = document.createElement("option");
-      option.value = vendor;
-      option.textContent = vendor;
+      option.value = vendor.name;
+      option.textContent = vendor.name;
       return option;
     }),
   );
   state.selectedType = group?.name || "";
-  state.selectedVendor = vendors.includes(preferredVendor) ? preferredVendor : vendors[0] || "";
+  state.selectedVendor = vendors.some((vendor) => vendor.name === preferredVendor) ? preferredVendor : vendors[0]?.name || "";
   els.typeSelect.value = state.selectedType;
   els.vendorSelect.value = state.selectedVendor;
   saveSelection();
+  updateKindButtons();
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let quoted = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    const next = text[i + 1];
+    if (quoted) {
+      if (char === '"' && next === '"') {
+        field += '"';
+        i += 1;
+      } else if (char === '"') {
+        quoted = false;
+      } else {
+        field += char;
+      }
+      continue;
+    }
+    if (char === '"') {
+      quoted = true;
+    } else if (char === ",") {
+      row.push(field);
+      field = "";
+    } else if (char === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else if (char !== "\r") {
+      field += char;
+    }
+  }
+  if (field || row.length) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows.filter((items) => items.some((item) => item.trim()));
+}
+
+function maxFromValue(value) {
+  const max = Number.parseInt(value, 10);
+  return Number.isInteger(max) && max >= 1 && max <= 4 ? max : 3;
+}
+
+function groupsFromCsv(text) {
+  const rows = parseCsv(text);
+  const header = rows.shift()?.map((item) => item.trim().replace(/^\uFEFF/, "")) || [];
+  const typeIndex = header.indexOf("類型");
+  const vendorIndex = header.indexOf("廠商");
+  const maxIndex = header.indexOf("max");
+  if (typeIndex < 0 || vendorIndex < 0) {
+    throw new Error("vendor-csv-header");
+  }
+
+  const groups = [];
+  for (const row of rows) {
+    const type = row[typeIndex]?.trim();
+    const vendorName = row[vendorIndex]?.trim();
+    if (!type || !vendorName) {
+      continue;
+    }
+    let group = groups.find((item) => item.name === type);
+    if (!group) {
+      group = { name: type, vendors: [] };
+      groups.push(group);
+    }
+    group.vendors.push({
+      name: vendorName,
+      max: maxFromValue(row[maxIndex]),
+    });
+  }
+  return groups.filter((group) => group.vendors.length);
 }
 
 async function loadVendors() {
-  const response = await fetch("./vendors.json", { cache: "no-store" });
+  const response = await fetch("./vendors.csv", { cache: "no-store" });
   if (!response.ok) {
     throw new Error("vendor-list");
   }
-  const data = await response.json();
-  state.groups = Array.isArray(data.types) ? data.types : [];
+  state.groups = groupsFromCsv(await response.text());
   if (!state.groups.length) {
     throw new Error("empty-vendor-list");
   }
 
   const saved = readSelection();
-  const defaultType = groupByName(saved.selectedType) ? saved.selectedType : data.defaultType || state.groups[0].name;
+  const defaultType = groupByName(saved.selectedType) ? saved.selectedType : "外包商";
 
   populateTypes();
-  populateVendors(defaultType, saved.selectedVendor || data.defaultVendor || "");
+  populateVendors(defaultType, saved.selectedVendor || "馗鼎");
   state.selectedDate = dateValue();
   els.photoDate.value = state.selectedDate;
   setSelectedKind("");
@@ -556,7 +656,7 @@ function bindEvents() {
   els.vendorSelect.addEventListener("change", () => {
     state.selectedVendor = els.vendorSelect.value;
     saveSelection();
-    updatePhotoActions();
+    setSelectedKind("");
   });
 
   els.photoDate.addEventListener("change", () => {

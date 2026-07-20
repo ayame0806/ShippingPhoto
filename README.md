@@ -7,6 +7,15 @@
 
 ## Android 建置
 
+Android 版目前包含：
+
+- CameraX 相機預覽與拍照。
+- 依 `廠商_種類_日期時間.jpg` 命名。
+- 類型/廠商由內建 `vendors.csv` 讀取。
+- 廠商 `max` 會控制種類按鈕數量。
+- 拍照資料夾與 ZIP 資料夾使用 Android 資料夾選擇器設定，重新開啟後保留。
+- ZIP 會直接讀拍照資料夾內 JPG，保留原始檔名打包。
+
 本機已設定 Android SDK 與 Gradle Wrapper。產生測試 APK：
 
 ```powershell

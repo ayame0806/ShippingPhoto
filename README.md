@@ -1,37 +1,6 @@
-# Shipping Photo
+# Shipping Photo Web
 
-## 專案結構
-
-- `ShippingPhoto_web/`：目前手機網頁版。
-- `ShippingPhoto_android/`：Android APK 專用版本。
-
-## Android 建置
-
-Android 版目前包含：
-
-- CameraX 相機預覽與拍照。
-- 依 `廠商_種類_日期時間.jpg` 命名。
-- 類型/廠商由內建 `vendors.csv` 讀取。
-- 廠商 `max` 會控制種類按鈕數量。
-- 拍照資料夾與 ZIP 資料夾使用 Android 資料夾選擇器設定，重新開啟後保留。
-- ZIP 會直接讀拍照資料夾內 JPG，保留原始檔名打包。
-
-本機已設定 Android SDK 與 Gradle Wrapper。產生測試 APK：
-
-```powershell
-cd ShippingPhoto_android
-.\gradlew.bat assembleDebug
-```
-
-輸出位置：
-
-```text
-ShippingPhoto_android/app/build/outputs/apk/debug/app-debug.apk
-```
-
----
-
-手機用出貨拍照工具。開啟網頁後會要求相機權限，選擇類型、廠商與種類後，拍照會下載成：
+手機用出貨拍照網頁工具。開啟網頁後會要求相機權限，選擇類型、廠商與種類後，拍照會下載成：
 
 ```text
 廠商_種類_YYYYMMDDHHMMSS.jpg
@@ -59,10 +28,10 @@ ShippingPhoto_android/app/build/outputs/apk/debug/app-debug.apk
 
 ## 壓縮工具
 
-頁面底部的壓縮工具可一次選取多張 `.jpg` / `.jpeg` 照片，並打包下載成：
+可一次選取多個 `.jpg` / `.jpeg` 檔案並打包成：
 
 ```text
 出貨照片_YYYYMMDDHHMMSS.zip
 ```
 
-JPG 本身已經是壓縮格式，所以 ZIP 主要用於把多張照片整理成一個檔案。
+ZIP 會保留瀏覽器取得的檔名；若從手機相簿選檔，系統可能不提供原始檔名，建議從「檔案 / Downloads」選取。

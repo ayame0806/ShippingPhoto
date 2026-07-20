@@ -1,5 +1,27 @@
 # Shipping Photo
 
+## 專案結構
+
+- `ShippingPhoto_web/`：目前手機網頁版。
+- `ShippingPhoto_android/`：Android APK 專用版本。
+
+## Android 建置
+
+本機已設定 Android SDK 與 Gradle Wrapper。產生測試 APK：
+
+```powershell
+cd ShippingPhoto_android
+.\gradlew.bat assembleDebug
+```
+
+輸出位置：
+
+```text
+ShippingPhoto_android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+---
+
 手機用出貨拍照工具。開啟網頁後會要求相機權限，選擇類型、廠商與種類後，拍照會下載成：
 
 ```text
